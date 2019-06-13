@@ -365,29 +365,27 @@ class wwdcVideosController {
     }
 
     class func getSampleCodeURL(fromHTML: String) -> [URL] {
-        let pat = "\\b.*(href=\".*/content/samplecode/.*\")\\b"
+        let pat = "\\b.*(href=\".*/documentation/.*/.*\")\\b"
         let regex = try! NSRegularExpression(pattern: pat, options: [])
         let matches = regex.matches(in: fromHTML, options: [], range: NSRange(location: 0, length: fromHTML.count))
         var sampleURLPaths : [String] = []
         for match in matches {
             let range = match.range(at:1)
             var path = String(fromHTML[fromHTML.index(fromHTML.startIndex, offsetBy: range.location) ..< fromHTML.index(fromHTML.startIndex, offsetBy: range.location+range.length)])
-            path = path.replacingOccurrences(of: "href=\"", with: "https://developer.apple.com")
+            path = path.replacingOccurrences(of: "href=\"", with: "")
             path = path.replacingOccurrences(of: "\" target=\"", with: "/")
 
             sampleURLPaths.append(path)
         }
-
         var sampleArchiveUrls : [URL] = []
         for urlPath in sampleURLPaths {
-            let jsonText = getStringContent(fromURL: urlPath + "book.json")
-            if let data = jsonText.data(using: .utf8) {
-                let object = try? JSONSerialization.jsonObject(with: data, options: .allowFragments)
-                if let dictionary = object as? NSDictionary {
-                    if let relativePath = dictionary["sampleCode"] as? String, let url = URL(string: urlPath + relativePath) {
-                        sampleArchiveUrls.append(url)
-                    }
-                }
+            let html = getStringContent(fromURL: urlPath)
+            let pat = "\\bhref=\"[^\"]*\" download\\b"
+            if let downloadLinkRange = html.range(of: pat, options: .regularExpression) {
+                var url = String(html[downloadLinkRange])
+                url = url.replacingOccurrences(of: "href=\"", with: "")
+                url = url.replacingOccurrences(of: "\" download", with: "")
+                sampleArchiveUrls.append(URL(string: url)!)				
             }
         }
 
